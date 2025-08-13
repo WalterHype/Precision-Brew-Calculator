@@ -18,6 +18,15 @@ SHA-256 Checksum: We provide a unique digital fingerprint for every .exe file. Y
 
 VirusTotal Analysis: Each release is scanned by VirusTotal, a service that uses over 70 different antivirus engines to check for malware. We provide a public link to the report for every version so you can see the results for yourself.
 
+https://www.virustotal.com/gui/file/e0fef686fb0cedac5d054fede0fe16ca85064f9c6b8d84c63c244c6c4bb2e6a5/relations
+
+false postive as exe is unsigned! 
+
+
+
+
+
+
 Key Features
 Runs Locally on Your PC
 No internet connection required. The calculator runs directly on your desktop, making it fast, reliable, and always available when you need it.
