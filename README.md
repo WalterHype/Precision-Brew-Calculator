@@ -1,4 +1,7 @@
+DOWNLOAD HERE 
 
+
+https://github.com/WalterHype/Precision-Brew-Calculator/releases/tag/v1.0.0-beta
 
 Welcome to the official repository for the Precision Brew Calculator, a standalone desktop application designed for the serious homebrewer who demands accuracy and reliability. This tool was built to be more precise, transparent, and powerful than any web-based calculator available.
 
