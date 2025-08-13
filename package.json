@@ -1,0 +1,28 @@
+{
+  "name": "brew-calculator-app",
+  "version": "1.0.0",
+  "description": "A precision brew calculator",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "electron": "^25.0.0",
+    "electron-builder": "^24.0.0"
+  },
+  "build": {
+    "appId": "com.brewcalculator.app",
+    "productName": "Precision Brew Calculator",
+    "win": {
+      "target": "nsis"
+    },
+    "files": [
+      "index.html",
+      "main.js",
+      "package.json"
+    ]
+  }
+}

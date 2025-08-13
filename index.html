@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Precision Brew Calculator</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Added jsPDF and Chart.js libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg-primary: #1a1a1a; --bg-secondary: #2c2c2c; --bg-tertiary: #3a3a3a;
+            --text-primary: #f0f0f0; --text-secondary: #a0a0a0; --accent-primary: #007aff;
+            --accent-secondary: #34c759; --border-color: #444; --shadow-color: rgba(0, 0, 0, 0.2);
+            --danger-color: #ff453a;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            display: flex;
+            justify-content: center;
+            align-items: flex-start; /* Align top */
+            min-height: 100vh;
+            padding: 40px 20px;
+            overflow-y: auto;
+        }
+        main {
+            width: 100%;
+            max-width: 1100px;
+            margin: auto;
+        }
+        .card {
+            background-color: var(--bg-secondary);
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            padding: 25px;
+        }
+        .page-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .page-header h2 { font-size: 28px; font-weight: 700; }
+        .page-header p { color: var(--text-secondary); font-size: 16px; margin-top: 8px; }
+        .calculator-grid {
+            display: grid;
+            grid-template-columns: 1fr 1.2fr;
+            gap: 30px;
+        }
+        @media (max-width: 900px) {
+            .calculator-grid { grid-template-columns: 1fr; }
+        }
+        .form-group { margin-bottom: 20px; }
+        .form-group label {
+            display: block; font-size: 14px; font-weight: 500;
+            margin-bottom: 8px; color: var(--text-secondary);
+        }
+        .form-group input, .form-group select {
+            width: 100%; padding: 12px; background-color: var(--bg-primary);
+            border: 1px solid var(--border-color); border-radius: 8px;
+            color: var(--text-primary); font-size: 14px;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .form-group input:focus, .form-group select:focus {
+            outline: none; border-color: var(--accent-primary);
+            box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.3);
+        }
+        .button {
+            display: inline-flex; align-items: center; justify-content: center;
+            gap: 8px; padding: 12px 18px; border: none; border-radius: 8px;
+            font-size: 16px; font-weight: 600; cursor: pointer;
+            transition: all 0.2s ease-in-out; width: 100%;
+        }
+        .button-primary { background-color: var(--accent-primary); color: white; }
+        .button-primary:hover {
+            filter: brightness(1.2); transform: translateY(-2px);
+            box-shadow: 0 4px 12px var(--shadow-color);
+        }
+        .button-secondary { background-color: var(--bg-tertiary); color: var(--text-primary); }
+        .calculator-results { padding: 0; }
+        .results-header {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 20px 25px 0;
+        }
+        .results-header h3 { text-align: center; margin-bottom: 0; }
+        #recipe-results-container { padding: 20px 25px 25px; }
+        .result-item {
+            display: flex; justify-content: space-between; font-size: 16px;
+            padding: 15px; border-radius: 8px; margin-bottom: 10px;
+        }
+        .result-item:nth-child(odd) { background-color: var(--bg-tertiary); }
+        .result-item .label { font-weight: 600; }
+        .result-item .value { font-family: monospace; color: var(--accent-secondary); font-weight: 500;}
+        .toggle-switch { display: flex; align-items: center; gap: 10px; }
+        .toggle-switch input { display: none; }
+        .toggle-switch .slider {
+            width: 44px; height: 24px; background-color: var(--bg-tertiary);
+            border-radius: 12px; cursor: pointer; position: relative;
+            transition: background-color 0.2s;
+        }
+        .toggle-switch .slider::before {
+            content: ''; position: absolute; width: 20px; height: 20px;
+            border-radius: 50%; background-color: white; top: 2px; left: 2px;
+            transition: transform 0.2s;
+        }
+        .toggle-switch input:checked + .slider { background-color: var(--accent-primary); }
+        .toggle-switch input:checked + .slider::before { transform: translateX(20px); }
+        .info-box {
+            background-color: rgba(0, 122, 255, 0.1); border-left: 3px solid var(--accent-primary);
+            padding: 15px; margin: 0 25px 25px 25px; border-radius: 0 8px 8px 0;
+            font-size: 13px; color: var(--text-secondary);
+        }
+        .info-box p { margin: 0; }
+        .info-box strong { color: var(--text-primary); }
+        #recipe-chart-container {
+            position: relative;
+            height: 220px;
+            margin: 10px 25px 20px;
+        }
+        #download-pdf-button {
+            margin: 0 25px 25px 25px;
+            width: calc(100% - 50px);
+            display: none; /* Hidden by default */
+        }
+    </style>
+</head>
+<body>
+    <main>
+        <div class="page-header">
+            <h2>Precision Brew Calculator</h2>
+            <p>An advanced tool for accurate sterile solution recipes.</p>
+        </div>
+        <div class="calculator-grid">
+            <div class="card">
+                <form id="brew-calculator-form">
+                    <div class="form-group"><label for="calc-compound">Select Powder</label><select id="calc-compound"></select></div>
+                    <div class="form-group"><label for="calc-purity">Powder Purity (%)</label><input type="number" id="calc-purity" value="99.5" step="0.1"></div>
+                    <div class="form-group"><label for="calc-concentration">Desired Concentration (mg/mL)</label><input type="number" id="calc-concentration" value="250"></div>
+                    <div class="form-group"><label for="calc-volume">Total Volume to Make (mL)</label><input type="number" id="calc-volume" value="50"></div>
+                    <div class="form-group"><label for="calc-carrier">Select Carrier Oil</label><select id="calc-carrier"></select></div>
+                    <div class="form-group"><label for="calc-ba">Benzyl Alcohol (BA) (%)</label><input type="number" id="calc-ba" value="2" step="0.1"></div>
+                    <div class="form-group"><label for="calc-bb">Benzyl Benzoate (BB) (%)</label><input type="number" id="calc-bb" value="20" step="0.1"></div>
+                    <div class="form-group"><label for="calc-filter">Filter Type (for loss calculation)</label><select id="calc-filter"></select></div>
+                    <button type="submit" class="button button-primary">Calculate Recipe</button>
+                </form>
+            </div>
+            <div class="calculator-results card">
+                <div class="results-header">
+                    <h3>Your Recipe</h3>
+                    <div class="toggle-switch">
+                        <span>mL</span>
+                        <input type="checkbox" id="unit-toggle"><label class="slider" for="unit-toggle"></label><span>g</span>
+                    </div>
+                </div>
+                <div id="recipe-chart-container">
+                    <canvas id="recipe-chart"></canvas>
+                </div>
+                <div id="recipe-results-container">
+                    <p style="text-align: center; color: var(--text-secondary);">Enter details and click calculate.</p>
+                </div>
+                <button id="download-pdf-button" class="button button-secondary">Download Recipe as PDF</button>
+                <div class="info-box">
+                    <p><strong>Note:</strong> Powder displacement is an estimate (0.85 mL/g). Filter loss is subtracted from the carrier oil.</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // Use jsPDF from the global scope
+        const { jsPDF } = window.jspdf;
+
+        // =========================================================================
+        // EXPANDED HIGH-PRECISION DATA MODULE
+        // =========================================================================
+        const BREW_DATA = {
+            powders: [
+                // Common Testosterone Esters
+                { name: 'Testosterone Enanthate', displacement: 0.85 },
+                { name: 'Testosterone Cypionate', displacement: 0.85 },
+                { name: 'Testosterone Propionate', displacement: 0.85 },
+                { name: 'Testosterone Phenylpropionate', displacement: 0.85 },
+                { name: 'Testosterone Isocaproate', displacement: 0.85 },
+                { name: 'Testosterone Decanoate', displacement: 0.85 },
+                // Common Trenbolone Esters
+                { name: 'Trenbolone Acetate', displacement: 0.85 },
+                { name: 'Trenbolone Enanthate', displacement: 0.85 },
+                { name: 'Trenbolone Hexahydrobenzylcarbonate', displacement: 0.85 },
+                // Common Nandrolone Esters
+                { name: 'Nandrolone Decanoate (Deca)', displacement: 0.85 },
+                { name: 'Nandrolone Phenylpropionate (NPP)', displacement: 0.85 },
+                // Other Compounds
+                { name: 'Drostanolone Propionate (Masteron P)', displacement: 0.85 },
+                { name: 'Drostanolone Enanthate (Masteron E)', displacement: 0.85 },
+                { name: 'Boldenone Undecylenate (EQ)', displacement: 0.85 },
+                { name: 'Metenolone Enanthate (Primobolan)', displacement: 0.85 },
+                { name: 'Mesterolone (Proviron)', displacement: 0.85 },
+                { name: 'Metribolone (Methyltrienolone/MTren)', displacement: 0.85 },
+            ],
+            carriers: [
+                { name: 'Grapeseed Oil (GSO)', density: 0.92 },
+                { name: 'Cottonseed Oil (CSO)', density: 0.92 },
+                { name: 'MCT Oil', density: 0.95 },
+                { name: 'Sesame Oil', density: 0.92 },
+                { name: 'Castor Oil', density: 0.96 },
+                { name: 'Miglyol 840', density: 0.94 },
+                { name: 'Ethyl Oleate (EO)', density: 0.87 },
+            ],
+            solvents: {
+                'Benzyl Alcohol (BA)': { density: 1.044 },
+                'Benzyl Benzoate (BB)': { density: 1.118 },
+                'Guaiacol': { density: 1.129 }, // Added Guaiacol
+            },
+            filters: [
+                { name: 'None (No loss)', holdUp: 0 },
+                { name: 'Syringe Filter - 25mm PTFE', holdUp: 0.1 },
+                { name: 'Syringe Filter - 33mm PTFE', holdUp: 0.15 },
+                { name: 'Bottle-Top Filter - 100mm PTFE', holdUp: 2.0 },
+                { name: 'Bottle-Top Filter - 150mm PTFE', holdUp: 4.5 },
+            ]
+        };
+
+        // =========================================================================
+        // DOM ELEMENT SELECTORS & APP STATE
+        // =========================================================================
+        const brewCalculatorForm = document.getElementById('brew-calculator-form');
+        const resultsContainer = document.getElementById('recipe-results-container');
+        const unitToggle = document.getElementById('unit-toggle');
+        const downloadPdfButton = document.getElementById('download-pdf-button');
+        const chartCanvas = document.getElementById('recipe-chart');
+
+        let lastRecipe = null;
+        let recipeChart = null;
+
+        // =========================================================================
+        // INITIALIZATION
+        // =========================================================================
+        function init() {
+            populateDropdowns();
+            addEventListeners();
+        }
+
+        function populateDropdowns() {
+            const compoundSelect = document.getElementById('calc-compound');
+            const carrierSelect = document.getElementById('calc-carrier');
+            const filterSelect = document.getElementById('calc-filter');
+            BREW_DATA.powders.sort((a, b) => a.name.localeCompare(b.name)).forEach(p => compoundSelect.add(new Option(p.name, p.name)));
+            BREW_DATA.carriers.forEach(c => carrierSelect.add(new Option(`${c.name} (${c.density} g/mL)`, c.name)));
+            BREW_DATA.filters.forEach(f => filterSelect.add(new Option(`${f.name} (~${f.holdUp} mL loss)`, f.name)));
+        }
+
+        function addEventListeners() {
+            brewCalculatorForm.addEventListener('submit', handleCalculateRecipe);
+            unitToggle.addEventListener('change', () => displayRecipeResults(lastRecipe));
+            downloadPdfButton.addEventListener('click', handleDownloadPdf);
+        }
+
+        // =========================================================================
+        // CALCULATION LOGIC
+        // =========================================================================
+        function handleCalculateRecipe(e) {
+            e.preventDefault();
+            const getVal = id => parseFloat(document.getElementById(id).value);
+            const getStr = id => document.getElementById(id).value;
+
+            const selectedPowderName = getStr('calc-compound');
+            const selectedCarrierName = getStr('calc-carrier');
+            const selectedFilterName = getStr('calc-filter');
+            const powderPurity = getVal('calc-purity') / 100;
+            const desiredConcentration = getVal('calc-concentration');
+            const totalVolume = getVal('calc-volume');
+            const baPercent = getVal('calc-ba') / 100;
+            const bbPercent = getVal('calc-bb') / 100;
+
+            if ([powderPurity, desiredConcentration, totalVolume, baPercent, bbPercent].some(isNaN)) {
+                resultsContainer.innerHTML = `<p style="color: var(--danger-color); text-align: center;">Please fill all fields with valid numbers.</p>`;
+                return;
+            }
+
+            const powderData = BREW_DATA.powders.find(p => p.name === selectedPowderName);
+            const carrierData = BREW_DATA.carriers.find(c => c.name === selectedCarrierName);
+            const filterData = BREW_DATA.filters.find(f => f.name === selectedFilterName);
+            const baData = BREW_DATA.solvents['Benzyl Alcohol (BA)'];
+            const bbData = BREW_DATA.solvents['Benzyl Benzoate (BB)'];
+
+            if (!powderData || !carrierData || !filterData) {
+                resultsContainer.innerHTML = `<p style="color: var(--danger-color); text-align: center;">Could not find data for selected items.</p>`;
+                return;
+            }
+
+            const totalMgNeeded = totalVolume * desiredConcentration;
+            const gramsOfPowder = (totalMgNeeded / 1000) / powderPurity;
+            const powderVolumeDisplaced = gramsOfPowder * powderData.displacement;
+            const baVolume = totalVolume * baPercent;
+            const bbVolume = totalVolume * bbPercent;
+            const filterLoss = filterData.holdUp;
+            let carrierVolume = totalVolume - powderVolumeDisplaced - baVolume - bbVolume - filterLoss;
+
+            if (carrierVolume < 0) {
+                 resultsContainer.innerHTML = `<p style="color: var(--danger-color); text-align: center;">Error: Carrier volume is negative (${carrierVolume.toFixed(2)} mL). Recipe not possible.</p>`;
+                 lastRecipe = null;
+                 if(recipeChart) recipeChart.destroy();
+                 downloadPdfButton.style.display = 'none';
+                 return;
+            }
+
+            lastRecipe = {
+                inputs: {
+                    powderName: selectedPowderName,
+                    concentration: desiredConcentration,
+                    totalVolume: totalVolume,
+                },
+                gramsOfPowder,
+                powderVolumeDisplaced,
+                ba: { volume: baVolume, density: baData.density },
+                bb: { volume: bbVolume, density: bbData.density },
+                carrier: { name: carrierData.name, volume: carrierVolume, density: carrierData.density },
+                filterLoss
+            };
+
+            displayRecipeResults(lastRecipe);
+            downloadPdfButton.style.display = 'inline-flex';
+        }
+
+        // =========================================================================
+        // DISPLAY & VISUALIZATION LOGIC
+        // =========================================================================
+        function displayRecipeResults(recipe) {
+            if (!recipe) return;
+
+            const isGrams = unitToggle.checked;
+            const unit = isGrams ? 'g' : 'mL';
+            const getDisplayValue = (volume, density) => isGrams ? (volume * density).toFixed(2) : volume.toFixed(2);
+
+            resultsContainer.innerHTML = `
+                <div class="result-item"><span class="label">Powder Needed:</span><span class="value">${recipe.gramsOfPowder.toFixed(2)} g</span></div>
+                <div class="result-item"><span class="label">Powder Displacement:</span><span class="value">${recipe.powderVolumeDisplaced.toFixed(2)} mL</span></div>
+                <div class="result-item"><span class="label">Benzyl Alcohol (BA):</span><span class="value">${getDisplayValue(recipe.ba.volume, recipe.ba.density)} ${unit}</span></div>
+                <div class="result-item"><span class="label">Benzyl Benzoate (BB):</span><span class="value">${getDisplayValue(recipe.bb.volume, recipe.bb.density)} ${unit}</span></div>
+                <div class="result-item"><span class="label">Carrier Oil (${recipe.carrier.name}):</span><span class="value">${getDisplayValue(recipe.carrier.volume, recipe.carrier.density)} ${unit}</span></div>
+                ${recipe.filterLoss > 0 ? `<div class="result-item" style="background-color: rgba(255, 69, 58, 0.1);"><span class="label">Estimated Filter Loss:</span><span class="value">-${recipe.filterLoss.toFixed(2)} mL</span></div>` : ''}
+            `;
+            renderRecipeChart(recipe);
+        }
+
+        function renderRecipeChart(recipe) {
+            if (!recipe) return;
+            if (recipeChart) recipeChart.destroy(); // Clear previous chart
+
+            const ctx = chartCanvas.getContext('2d');
+            recipeChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Powder (by volume)', 'Benzyl Alcohol', 'Benzyl Benzoate', 'Carrier Oil'],
+                    datasets: [{
+                        data: [
+                            recipe.powderVolumeDisplaced,
+                            recipe.ba.volume,
+                            recipe.bb.volume,
+                            recipe.carrier.volume
+                        ],
+                        backgroundColor: ['#007aff', '#34c759', '#ff9500', '#af52de'],
+                        borderColor: 'var(--bg-secondary)',
+                        borderWidth: 4,
+                        hoverOffset: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { color: 'var(--text-primary)', padding: 15 } },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.label || '';
+                                    if (label) label += ': ';
+                                    if (context.parsed !== null) {
+                                        const total = context.chart.getDatasetMeta(0).total;
+                                        const percentage = ((context.parsed / total) * 100).toFixed(1);
+                                        label += `${context.raw.toFixed(2)} mL (${percentage}%)`;
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    },
+                    cutout: '60%'
+                }
+            });
+        }
+
+        // =========================================================================
+        // PDF DOWNLOAD LOGIC
+        // =========================================================================
+        function handleDownloadPdf() {
+            if (!lastRecipe) return;
+
+            const doc = new jsPDF();
+            const recipe = lastRecipe;
+            const inputs = recipe.inputs;
+            const date = new Date().toLocaleDateString();
+
+            // --- Header ---
+            doc.setFontSize(18);
+            doc.setFont('helvetica', 'bold');
+            doc.text('Precision Brew Recipe', 105, 20, { align: 'center' });
+            doc.setFontSize(10);
+            doc.setFont('helvetica', 'normal');
+            doc.text(`Generated on: ${date}`, 105, 27, { align: 'center' });
+
+            // --- Summary ---
+            doc.setFontSize(12);
+            doc.setFont('helvetica', 'bold');
+            doc.text('Recipe Summary', 14, 40);
+            doc.setLineWidth(0.5);
+            doc.line(14, 42, 196, 42);
+
+            doc.setFont('helvetica', 'normal');
+            doc.text(`Target: ${inputs.totalVolume} mL of ${inputs.powderName} @ ${inputs.concentration} mg/mL`, 16, 50);
+
+            // --- Ingredients Table ---
+            doc.setFontSize(12);
+            doc.setFont('helvetica', 'bold');
+            doc.text('Required Ingredients', 14, 70);
+            doc.line(14, 72, 196, 72);
+
+            const tableData = [
+                ['Powder Needed:', `${recipe.gramsOfPowder.toFixed(2)} g`, ''],
+                ['Powder Displacement:', `${recipe.powderVolumeDisplaced.toFixed(2)} mL`, ''],
+                ['Benzyl Alcohol (BA):', `${recipe.ba.volume.toFixed(2)} mL`, `(${ (recipe.ba.volume * recipe.ba.density).toFixed(2) } g)`],
+                ['Benzyl Benzoate (BB):', `${recipe.bb.volume.toFixed(2)} mL`, `(${ (recipe.bb.volume * recipe.bb.density).toFixed(2) } g)`],
+                [`Carrier Oil (${recipe.carrier.name}):`, `${recipe.carrier.volume.toFixed(2)} mL`, `(${ (recipe.carrier.volume * recipe.carrier.density).toFixed(2) } g)`]
+            ];
+            
+            let startY = 80;
+            doc.setFontSize(11);
+            tableData.forEach(row => {
+                doc.setFont('helvetica', 'bold');
+                doc.text(row[0], 16, startY);
+                doc.setFont('helvetica', 'normal');
+                doc.text(row[1], 80, startY);
+                doc.setTextColor(150);
+                doc.text(row[2], 110, startY);
+                doc.setTextColor(0);
+                startY += 8;
+            });
+
+            // --- Notes ---
+            if (recipe.filterLoss > 0) {
+                doc.setFontSize(10);
+                doc.setFont('helvetica', 'italic');
+                doc.setTextColor(229, 57, 53);
+                doc.text(`Note: Carrier oil amount is reduced by ${recipe.filterLoss.toFixed(2)} mL to account for filter retention.`, 14, startY + 5);
+                doc.setTextColor(0);
+            }
+
+            doc.save(`brew-recipe-${inputs.powderName.replace(/\s/g, '_')}.pdf`);
+        }
+
+        // --- START THE APP ---
+        init();
+    });
+    </script>
+</body>
+</html>
